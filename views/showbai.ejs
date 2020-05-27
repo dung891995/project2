@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://code.jquery.com/jquery-3.5.0.min.js"
+        integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+        }
+
+        .info {
+
+            width: 80%;
+            margin: 0 auto;
+            height: auto;
+            overflow: auto;
+        }
+
+        .info-user {
+            float: left;
+            margin-left: 10px;
+            margin-top: 10px;
+            width: 255px;
+            height: 275px;
+            background-color: #ccdbcc;
+            border: 1px solid #aaa2ce;
+
+
+        }
+
+        p {
+            margin-left: 30px;
+        }
+
+        button {
+            margin-left: 30px
+        }
+
+        h3 {
+            text-align: center;
+        }
+
+        .search-user {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        #id-ele {
+            opacity: 0;
+
+        }
+
+        .li-page {
+            display: inline;
+        }
+    </style>
+</head>
+<style></style>
+
+<body>
+    <button type="button" id="btn-login">
+        Login
+    </button>
+    <div class="search-user">
+        <form>
+            <input type="text" value="Nhập title" name="searchUser">
+            <button>Tìm kiếm</button>
+        </form>
+
+    </div>
+    <div class="info">
+        <div class="ok">
+        </div>
+
+    </div>
+    <div class="div-btn">
+        <ul class="ul-btn">
+
+        </ul>
+    </div>
+
+</body>
+<script>
+    var nPage = null;
+    getPage(1);
+    $.ajax({
+        url: "/article",
+        type: "GET",
+    }).then(function (data) {
+            console.log(data)
+        var nPage = Math.ceil(data.length / 3);
+        for (let i = 0; i < nPage; i++) {
+            var listButton = `
+            <li class="li-page" onClick=getPage('${i + 1}')>
+                <button style="padding:10px; margin-top:5px">${i + 1}</button>
+            </li>`
+            $('.ul-btn').append(listButton);
+        }
+
+        // }
+
+
+    })
+    function getPage(page) {
+        nPage = page;
+        $(".ok").html("")
+        $.ajax({
+            url: "/page/" + page,
+            type: 'GET'
+        }).then((data) => {
+            for (let i = 0; i < data.length; i++) {
+                var infoUser = `
+                  <div class='info-user info-user-${i + 1} '>
+                  <h3>Article ${i + 1}</h3>
+                  <br>
+                  <p>Title: <input class="input-title" name="title" id='title-${data[i]._id}' value="${data[i].title}"/>
+                     <span id="value-title-${data[i]._id}"> ${data[i].title} </span> </p>
+                  <br>
+                  <p>Content :<input class="input-content" name="content" id ="content-${data[i]._id}" value="${data[i].content}"/>
+                    <span id="value-content-${data[i]._id}"> ${data[i].content} </span></p>
+                  <br>
+                  <p>Author :<input class="input-author" name="author" id ="author-${data[i]._id}" value="${data[i].author}"/>   
+                    <span id="value-author-${data[i]._id}"+${data[i]._id}> ${data[i].author} </span></p>
+                  <br>
+                  <br>
+                  </div>
+              `
+                $(".ok").append(infoUser);
+            }
+            $('input').hide();
+            $('.btn-save').hide();
+        }).catch((err) => {
+
+        });
+    }
+    function edit(id) {
+        // $('.btn-save').show();
+        // $('span').hide();
+        // $('input').show();
+        // $('btn-edit').hide();
+        $("#title-" + id).show();
+        $("#content-" + id).show();
+        $("#author-" + id).show();
+        $("#value-author-" + id).hide();
+        $("#value-content-" + id).hide();
+        $("#value-title-" + id).hide();
+        $("#save-" + id).show();
+        $("#edit-" + id).hide();
+
+    }
+    function save(id) {
+
+        $("#value-author-" + id).show();
+        $("#value-content-" + id).show();
+        $("#value-title-" + id).show();
+        $("#title-" + id).hide();
+        $("#content-" + id).hide();
+        $("#author-" + id).hide();
+        $("#save-" + id).hide();
+        $("#edit-" + id).show();
+        var title = $('#title-' + id).val();
+        var content = $('#content-' + id).val();
+        var author = $('#author-' + id).val();
+        $.ajax({
+            url: "/update/" + id,
+            type: "PUT",
+            data: {
+                title: title,
+                content: content,
+                author: author,   
+            }
+        }).then((result) => {
+            // alert('sửa ok')
+            getPage(nPage)
+            console.log(nPage);
+
+            // getPage();
+        })
+    }
+    $("#btn-login").click(function () {
+        window.location.href = ('/login')
+    });
+</script>
+
+</html>
