@@ -13,6 +13,7 @@ function sendMail(to,subject,html) {
         to: to,
         subject:subject,
         html: html
+        
     }
     return new Promise(function(resolve,reject) {
         transporter.sendMail(mainOptions, function(err, info){
