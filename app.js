@@ -13,6 +13,8 @@ var auth = require('./routes/auth');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 require('./routes/passport');
+require('dotenv').config()
+var sendMail = require('./config/sendMail')
 var UserModel = require('./Models/userModel');
 var ArticleModel = require('./Models/articleModel');
 var app = express()
@@ -73,7 +75,10 @@ app.post('/signup', function (req, res, next) {
                 email: email,
                 password: hash
             }).then((result) => {
-                res.json(result)
+                var jwtSendMail = jwt.sign({id:result._id},"dung891995")
+                var subject = "Verify tài khoản";
+                var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>`
+                sendMail(result.email,subject,html)
             })
         });
     });
@@ -148,7 +153,16 @@ app.get("/page/:npage", function (req, res, next) {
     })
 })
 
-app.put("/update/:id", function (req, res, next) {
+app.put("/update/:id",function (req, res, next) {
+    var id = req.params.id;
+    ArticleModel.findById({_id:id}).then((result) => {
+        if (result) {
+        next()
+        }
+    })
+    res.json('khong ton tai bai viet nay')
+    
+}, function (req, res, next) {
     var id = req.params.id;
     var title = req.body.title;
     var content = req.body.content;
@@ -180,6 +194,20 @@ app.get('/logout',function (req,res,next) {
         message:'logout thanh cong'
     })
 
+})
+
+app.get('/active/:token',function (req,res,next) {
+    var token = req.params.token;
+    var jwtDecode= jwt.verify(token,"dung891995")
+    UserModel.updateOne({_id:jwtDecode.id},{isActive:true}).then(function(data){
+    console.log(jwtDecode);
+
+        return res.redirect("/login")
+
+    });
+})
+app.delete('/:id',function (req,res,next) {
+    ArticleModel.deleteOne({_id:req.params.id})
 })
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
