@@ -18,13 +18,13 @@ var sendMail = require('./config/sendMail')
 var UserModel = require('./Models/userModel');
 var ArticleModel = require('./Models/articleModel');
 var app = express()
-// app.set('trust proxy', 1) // trust first proxy
-// app.use(session({
-//   secret: 'keyboard cat',
-//   resave: false,
-//   saveUninitialized: true,
-//   cookie: { secure: false,maxAge:1000*60*60}
-// }))
+app.set('trust proxy', 1) // trust first proxy
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false,maxAge:1000*60*60}
+}))
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -35,7 +35,7 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname,'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
 app.use('/auth', auth);
@@ -75,16 +75,19 @@ app.post('/signup', function (req, res, next) {
                 email: email,
                 password: hash
             }).then((result) => {
-                var jwtSendMail = jwt.sign({id:result._id},"dung891995")
+                req.session.user= result;
+                console.log("======="+req.session.user);
+                console.log("------",result);
+                var jwtSendMail = jwt.sign({ id: result._id }, "dung891995", { expiresIn: "60" })
                 var subject = "Verify tài khoản";
                 var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>`
-                sendMail(result.email,subject,html)
+                sendMail(result.email, subject, html)
             })
         });
     });
 
 });
-app.get('/showbai',function (req, res, next) {
+app.get('/showbai', function (req, res, next) {
     var token = req.cookies.token
     if (token) {
         console.log(222222);
@@ -93,8 +96,8 @@ app.get('/showbai',function (req, res, next) {
             return res.redirect('/showbaiadmin');
         } else {
             return res.json({
-                err:true,
-                message:'ban ko phai admin'
+                err: true,
+                message: 'ban ko phai admin'
             })
         }
     } else {
@@ -109,24 +112,24 @@ app.get('/showbai',function (req, res, next) {
 app.get('/showbaiadmin', function (req, res, next) {
     var token = req.cookies.token
     if (token) {
-   
-  
-       try {
-        console.log(33333333);
-        var jwtDecode = jwt.verify(token, 'your_jwt_secret');
-        if (jwtDecode && jwtDecode.id == "5ecb851c93f5200e566235ac") {
-            console.log(4444);
-            return next();
-        } else {
-            console.log(33333989);
-            return res.json({
-                err:true,
-                message:'ban ko phai admin'
-            })
+
+
+        try {
+            console.log(33333333);
+            var jwtDecode = jwt.verify(token, 'your_jwt_secret');
+            if (jwtDecode && jwtDecode.id == "5ecb851c93f5200e566235ac") {
+                console.log(4444);
+                return next();
+            } else {
+                console.log(33333989);
+                return res.json({
+                    err: true,
+                    message: 'ban ko phai admin'
+                })
+            }
+        } catch (error) {
+            console.log(err, "errrr");
         }
-       } catch (error) {
-           console.log(err,"errrr");
-       }
     } else {
         console.log(11111);
         return res.redirect('/showbai')
@@ -134,7 +137,7 @@ app.get('/showbaiadmin', function (req, res, next) {
 
 
 }, function (req, res, next) {
-   return res.render('showbaiAdmin')
+    return res.render('showbaiAdmin')
 })
 app.get('/article', function (req, res, next) {
     ArticleModel.find().then((data) => {
@@ -153,15 +156,15 @@ app.get("/page/:npage", function (req, res, next) {
     })
 })
 
-app.put("/update/:id",function (req, res, next) {
+app.put("/update/:id", function (req, res, next) {
     var id = req.params.id;
-    ArticleModel.findById({_id:id}).then((result) => {
+    ArticleModel.findById({ _id: id }).then((result) => {
         if (result) {
-        next()
+            next()
         }
     })
     res.json('khong ton tai bai viet nay')
-    
+
 }, function (req, res, next) {
     var id = req.params.id;
     var title = req.body.title;
@@ -186,28 +189,46 @@ app.put("/update/:id",function (req, res, next) {
     })
 })
 
-app.get('/logout',function (req,res,next) {
+app.get('/logout', function (req, res, next) {
     res.clearCookie("token");
     req.logOut();
     res.json({
-        err:false,
-        message:'logout thanh cong'
+        err: false,
+        message: 'logout thanh cong'
     })
 
 })
 
-app.get('/active/:token',function (req,res,next) {
+app.get('/active/:token', function (req, res, next) {
     var token = req.params.token;
-    var jwtDecode= jwt.verify(token,"dung891995")
-    UserModel.updateOne({_id:jwtDecode.id},{isActive:true}).then(function(data){
-    console.log(jwtDecode);
 
-        return res.redirect("/login")
+    try {
+        var jwtDecode = jwt.verify(token, "dung891995")
+        console.log(jwtDecode);
+        UserModel.updateOne({ _id: jwtDecode.id }, { isActive: true }).then(function (data) {
+            console.log(jwtDecode);
 
-    });
+            return res.redirect("/login")
+
+        });
+    } catch (error) {
+
+        if (error.message == "jwt expired") {
+            console.log(1111);
+            console.log(req.session.user._id,"------------");
+            var jwtSendMail = jwt.sign({ id: req.session.user._id}, "dung891995", { expiresIn: "60" })
+            var subject = "Verify tài khoản";
+            var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>`
+            sendMail(req.session.user.email, subject, html)
+        }
+        if (error.message == "invalid token" || error.message == "jwt malformed") {
+
+        }
+    }
+
 })
-app.delete('/:id',function (req,res,next) {
-    ArticleModel.deleteOne({_id:req.params.id})
+app.delete('/:id', function (req, res, next) {
+    ArticleModel.deleteOne({ _id: req.params.id })
 })
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
