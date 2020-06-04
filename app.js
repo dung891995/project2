@@ -18,13 +18,13 @@ var sendMail = require('./config/sendMail')
 var UserModel = require('./Models/userModel');
 var ArticleModel = require('./Models/articleModel');
 var app = express()
-app.set('trust proxy', 1) // trust first proxy
-app.use(session({
-  secret: 'keyboard cat',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false,maxAge:1000*60*60}
-}))
+// app.set('trust proxy', 1) // trust first proxy
+// app.use(session({
+//   secret: 'keyboard cat',
+//   resave: false,
+//   saveUninitialized: true,
+//   cookie: { secure: false,maxAge:1000*60*60}
+// }))
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -52,7 +52,7 @@ app.get('/dangbai', function (req, res, next) {
     var token = req.cookies.token
     if (token) {
         var jwtDecode = jwt.verify(token, 'your_jwt_secret')
-        if (jwtDecode.length >= 1 && jwtDecode.id == "5ecb851c93f5200e566235ac") {
+        if (jwtDecode.length >= 1 && jwtDecode.email == "dung891995@gmail.com") {
             next();
         } else {
             res.redirect('/showbai')
@@ -66,6 +66,67 @@ app.get('/dangbai', function (req, res, next) {
     res.render('addArticle')
 })
 
+app.get('/quenpass', function (req, res, next) {
+    res.render('forgotPass')
+})
+
+app.get('/newPass/:token',function (req,res,next) {
+    res.cookie('renewPass', req.params.token, { maxAge: 1000 * 3600 * 12 });
+    res.render('newPass')
+})
+app.post('/newPass',function (req,res) {
+    var tokenRenewPass = req.cookies.renewPass;
+    var decodeToken = jwt.verify(tokenRenewPass,'dung891995')
+    var password=req.body.password;
+    console.log(password);
+    bcrypt.genSalt(saltRounds, function(err, salt) {
+        bcrypt.hash(password, salt, function(err, hash) {
+            UserModel.updateOne({email:decodeToken.email},{password:hash}).then((result) => {
+                res.json(result)
+            }).catch((err) => {
+                
+            });
+        });
+    });
+
+    
+})
+app.post('/renewPass', function (req, res, next) {
+    var email = req.body.email;
+    UserModel.findOne({ email: email }).then((result) => {
+        var jwtRenewPass = jwt.sign({ email: result.email }, "dung891995", { expiresIn: '2d' });
+        
+        var subject = "Cap lai Pass";
+        var html = `<a href="http://localhost:3000/newPass/${jwtRenewPass}">Click to renew password</a>
+                `
+                sendMail(result.email,subject,html)
+                
+    })
+})
+
+// app.get('/renewPass/:token',function (req,res,next) {
+//     var token = req.params.token;
+
+//     try {
+//         var jwtDecode = jwt.verify(token, "dung891995")
+//         console.log(jwtDecode);
+//         UserModel.updateOne({ email: jwtDecode.email }, { isActive: true }).then(function (data) {
+//             console.log(jwtDecode);
+
+//             return res.redirect("/login")
+
+//         });
+//     } catch (error) {
+//         if (error.message == "jwt expired") {
+
+//             res.render('verifyFalse')
+//         }
+//         // if (error.message == "invalid token" || error.message == "jwt malformed") {
+
+//         // }
+//     }
+// })
+
 app.post('/signup', function (req, res, next) {
     var email = req.body.email;
     var password = req.body.password;
@@ -75,18 +136,66 @@ app.post('/signup', function (req, res, next) {
                 email: email,
                 password: hash
             }).then((result) => {
-                req.session.user= result;
-                console.log("======="+req.session.user);
-                console.log("------",result);
-                var jwtSendMail = jwt.sign({ id: result._id }, "dung891995", { expiresIn: "60" })
+                console.log(result);
+                var jwtSendMail = jwt.sign({ id: result._id }, "dung891995", { expiresIn: '60' })
                 var subject = "Verify tài khoản";
-                var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>`
+                var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>
+                `
                 sendMail(result.email, subject, html)
             })
         });
     });
 
 });
+app.post('/resendEmail', async function (req, res, next) {
+    var email = req.body.email
+
+    try {
+        var user = await UserModel.findOne({ email: email });
+        console.log(user, "usr");
+        var token = jwt.sign({ email: user.email }, "dung891995", { expiresIn: 5 * 1000 * 60 });
+        console.log(token);
+        var subject = "Thư xác nhận"
+        var html = `
+                <p>Đây là nội dung xác nhận tài khoản tồn tại trong thời gian là 5p</p>
+                <a href="http://localhost:3000/active/${token}">Xác nhận</a>
+                
+              `
+        sendMail(user.email, subject, html).then((result) => {
+            //  console.log(sendMail);
+            return res.json("sendMail thanh cong")
+        }).catch((err) => {
+
+        });
+
+    } catch (error) {
+        res.json("error")
+    }
+});
+app.get('/active/:token', function (req, res, next) {
+    var token = req.params.token;
+
+    try {
+        var jwtDecode = jwt.verify(token, "dung891995")
+        console.log(jwtDecode);
+        UserModel.updateOne({ email: jwtDecode.email }, { isActive: true }).then(function (data) {
+            console.log(jwtDecode);
+
+            return res.redirect("/login")
+
+        });
+    } catch (error) {
+        if (error.message == "jwt expired") {
+
+            res.render('verifyFalse')
+        }
+        // if (error.message == "invalid token" || error.message == "jwt malformed") {
+
+        // }
+    }
+
+})
+
 app.get('/showbai', function (req, res, next) {
     var token = req.cookies.token
     if (token) {
@@ -199,34 +308,7 @@ app.get('/logout', function (req, res, next) {
 
 })
 
-app.get('/active/:token', function (req, res, next) {
-    var token = req.params.token;
 
-    try {
-        var jwtDecode = jwt.verify(token, "dung891995")
-        console.log(jwtDecode);
-        UserModel.updateOne({ _id: jwtDecode.id }, { isActive: true }).then(function (data) {
-            console.log(jwtDecode);
-
-            return res.redirect("/login")
-
-        });
-    } catch (error) {
-
-        if (error.message == "jwt expired") {
-            console.log(1111);
-            console.log(req.session.user._id,"------------");
-            var jwtSendMail = jwt.sign({ id: req.session.user._id}, "dung891995", { expiresIn: "60" })
-            var subject = "Verify tài khoản";
-            var html = `<a href="http://localhost:3000/active/${jwtSendMail}">Click to verify</a>`
-            sendMail(req.session.user.email, subject, html)
-        }
-        if (error.message == "invalid token" || error.message == "jwt malformed") {
-
-        }
-    }
-
-})
 app.delete('/:id', function (req, res, next) {
     ArticleModel.deleteOne({ _id: req.params.id })
 })
