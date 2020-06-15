@@ -17,7 +17,9 @@ require('dotenv').config()
 var sendMail = require('./config/sendMail')
 var UserModel = require('./Models/userModel');
 var ArticleModel = require('./Models/articleModel');
+var cors = require('cors')
 var app = express()
+app.use(cors())
 // app.set('trust proxy', 1) // trust first proxy
 // app.use(session({
 //   secret: 'keyboard cat',
@@ -48,6 +50,9 @@ app.get('/session', function name(params) {
 app.get('/signup', function (req, res, next) {
     res.render("signup")
 })
+
+
+//router post bai
 app.get('/dangbai', function (req, res, next) {
     var token = req.cookies.token
     if (token) {
@@ -66,6 +71,8 @@ app.get('/dangbai', function (req, res, next) {
     res.render('addArticle')
 })
 
+
+//router forgot password
 app.get('/quenpass', function (req, res, next) {
     res.render('forgotPass')
 })
@@ -91,6 +98,8 @@ app.post('/newPass',function (req,res) {
 
     
 })
+
+//router renew password
 app.post('/renewPass', function (req, res, next) {
     var email = req.body.email;
     UserModel.findOne({ email: email }).then((result) => {
@@ -104,29 +113,7 @@ app.post('/renewPass', function (req, res, next) {
     })
 })
 
-// app.get('/renewPass/:token',function (req,res,next) {
-//     var token = req.params.token;
-
-//     try {
-//         var jwtDecode = jwt.verify(token, "dung891995")
-//         console.log(jwtDecode);
-//         UserModel.updateOne({ email: jwtDecode.email }, { isActive: true }).then(function (data) {
-//             console.log(jwtDecode);
-
-//             return res.redirect("/login")
-
-//         });
-//     } catch (error) {
-//         if (error.message == "jwt expired") {
-
-//             res.render('verifyFalse')
-//         }
-//         // if (error.message == "invalid token" || error.message == "jwt malformed") {
-
-//         // }
-//     }
-// })
-
+//router sign up
 app.post('/signup', function (req, res, next) {
     var email = req.body.email;
     var password = req.body.password;
@@ -147,6 +134,9 @@ app.post('/signup', function (req, res, next) {
     });
 
 });
+
+
+//router xac nhan send email
 app.post('/resendEmail', async function (req, res, next) {
     var email = req.body.email
 
@@ -172,6 +162,7 @@ app.post('/resendEmail', async function (req, res, next) {
         res.json("error")
     }
 });
+
 app.get('/active/:token', function (req, res, next) {
     var token = req.params.token;
 

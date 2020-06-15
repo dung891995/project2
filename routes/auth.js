@@ -19,7 +19,7 @@ router.post('/login', function (req, res, next) {
             
             const token = jwt.sign({id:user._id}, 'your_jwt_secret');
             res.cookie('token', token, { maxAge: 1000 * 3600 * 12 });
-            return res.redirect('/showbaiadmin')
+            return res.json('dang nhap thanh cong')
             
         });
     })
@@ -39,6 +39,7 @@ passport.use(new LocalStrategy({
                     if (!result) {
                         return cb(null, false, { message: 'Incorrect email or password.' });
                     }
+                    console.log(data);
                     return cb(null, data, {
                         message: 'Logged In Successfully'
                     });
