@@ -259,11 +259,14 @@ app.get("/page/:npage", function (req, res, next) {
 app.put("/update/:id", function (req, res, next) {
     var id = req.params.id;
     ArticleModel.findById({ _id: id }).then((result) => {
-        if (result) {
-            next()
+        if (!result) {
+         return res.json('khong ton tai bai viet nay')
+
         }
+        next()
+
+    
     })
-    res.json('khong ton tai bai viet nay')
 
 }, function (req, res, next) {
     var id = req.params.id;
@@ -285,7 +288,9 @@ app.put("/update/:id", function (req, res, next) {
     ArticleModel.updateOne({
         _id: id
     }, userInfor).then((result) => {
-        res.json(result)
+        res.json({
+            message:"cap nhat thanh cong"
+        })
     })
 })
 
